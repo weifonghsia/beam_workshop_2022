@@ -56,7 +56,7 @@ def run(input_files, transform_jar, pipeline_args):
     java_transform = JavaExternalTransform(
         'beam.workshop.CustomTransform',
         classpath=[transform_jar]
-    ).create("rate_code", "hi from Python")
+    ).create("prefix-")
 
     with beam.Pipeline(options=pipeline_options) as pipeline:
         sql_group_by = (
@@ -74,11 +74,11 @@ def run(input_files, transform_jar, pipeline_args):
                  FROM PCOLLECTION
                  GROUP BY rate_code"""))
 
-        sql_group_by | "Print after SQL" >> beam.Map(lambda row: logging.info("After SQL:" + row))
+        sql_group_by | "Print after SQL" >> beam.Map(lambda row: logging.info("After SQL:" + str(row)))
 
         appended_sql_group_by = sql_group_by | "Send to Java" >> java_transform
 
-        appended_sql_group_by | "Print Converted" >> beam.Map(lambda row: logging.info("After Java:" + row))
+        appended_sql_group_by | "Print Converted" >> beam.Map(lambda row: logging.info("After Java:" + str(row)))
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.INFO)

@@ -17,8 +17,9 @@ source env/bin/activate
 ```
 - Install required dependencies
 ```shell
-pip install wheel
-pip install 'apache-beam[gcp]'
+pip3 install google-cloud-pubsub==2.1.0
+pip3 install google-cloud-bigquery-storage==2.13.2
+pip3 install apache-beam[gcp]==2.39.0
 ```
 
 ## Start the pipeline
