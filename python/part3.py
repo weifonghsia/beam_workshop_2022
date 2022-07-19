@@ -11,13 +11,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
-import json
 import logging
-import typing
 
 import apache_beam as beam
-from apache_beam.transforms.external import ImplicitSchemaPayloadBuilder
 from apache_beam.options.pipeline_options import PipelineOptions
 from apache_beam.transforms.sql import SqlTransform
 from apache_beam.transforms.external import JavaExternalTransform
@@ -53,33 +49,36 @@ class ConvertToRow(beam.DoFn):
             dropoff_location_id=str(line_array[20])
         )
 
-def run(input_files, classpath, pipeline_args):
+def run(input_files, transform_jar, pipeline_args):
     pipeline_options = PipelineOptions(
         pipeline_args, save_main_session=True)
 
     java_transform = JavaExternalTransform(
-        'com.google.beam.workshop.CustomJavaExternalTransform',
-        classpath=[classpath]).create("myprefix")
+        'beam.workshop.CustomTransform',
+        classpath=[transform_jar]
+    ).create("prefix-")
 
     with beam.Pipeline(options=pipeline_options) as pipeline:
         sql_group_by = (
-            pipeline
-            | "Read the files" >> beam.io.textio.ReadFromText(input_files)
-            | "Convert to Row" >> beam.ParDo(ConvertToRow(','))
-            | SqlTransform(
-                """
-                 SELECT
-                   rate_code,
-                   COUNT(*) AS num_rides,
-                   SUM(passenger_count) AS total_passengers,
-                   SUM(trip_distance) AS total_distance,
-                   SUM(fare_amount) as total_fare
-                 FROM PCOLLECTION
-                 GROUP BY rate_code"""))
+                pipeline
+                | "Read the files" >> beam.io.textio.ReadFromText(input_files)
+                | "Convert to Row" >> beam.ParDo(ConvertToRow(','))
+                | "Process via SQL" >> SqlTransform(
+            """
+             SELECT
+               rate_code,
+               COUNT(*) AS num_rides,
+               SUM(passenger_count) AS total_passengers,
+               SUM(trip_distance) AS total_distance,
+               SUM(fare_amount) as total_fare
+             FROM PCOLLECTION
+             GROUP BY rate_code"""))
+
+        sql_group_by | "Print after SQL" >> beam.Map(lambda row: logging.info("After SQL:" + str(row)))
 
         appended_sql_group_by = sql_group_by | "Send to Java" >> java_transform
 
-        appended_sql_group_by | beam.Map(lambda row: logging.info(row))
+        appended_sql_group_by | "Print Converted" >> beam.Map(lambda row: logging.info("After Java:" + str(row)))
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.INFO)
@@ -92,11 +91,11 @@ if __name__ == '__main__':
         required=True,
         help=('input file pattern'))
     parser.add_argument(
-        '--classpath',
-        dest='classpath',
+        '--transform_jar',
+        dest='transform_jar',
         required=True,
-        help='JAR classpath')
+        help='custom Java transform jar')
     known_args, pipeline_args = parser.parse_known_args()
 
-    run(known_args.input_files,known_args.classpath, pipeline_args)
+    run(known_args.input_files,known_args.transform_jar, pipeline_args)
 
