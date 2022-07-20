@@ -21,9 +21,7 @@ import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.CreateDisposition;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO.Write.WriteDisposition;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryUtils;
-import org.apache.beam.sdk.io.gcp.bigquery.WriteResult;
 import org.apache.beam.sdk.schemas.Schema;
-import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.SimpleFunction;
@@ -36,12 +34,14 @@ import org.slf4j.LoggerFactory;
 /**
  *
  */
-public class BQWrite extends PTransform<PCollection<Row>, PDone> {
+public class WriteToBigQuery extends PTransform<PCollection<Row>, PDone> {
 
-  private static final Logger logger = LoggerFactory.getLogger(BQWrite.class);
+  private static final Logger logger = LoggerFactory.getLogger(WriteToBigQuery.class);
 
   private String tableName;
-  private BQWrite(String tableName) {
+  private Write.Method method = Write.Method.DEFAULT;
+
+  private WriteToBigQuery(String tableName) {
     this.tableName = tableName;
   }
 
@@ -50,8 +50,18 @@ public class BQWrite extends PTransform<PCollection<Row>, PDone> {
    *
    * @return constructed transform
    */
-  public static BQWrite create(String tableName) {
-    return new BQWrite(tableName);
+  public static WriteToBigQuery writeTo(String tableName) {
+    return new WriteToBigQuery(tableName);
+  }
+
+  public WriteToBigQuery usingStorageApiAtLeastOnceMethod() {
+    method = Write.Method.STORAGE_API_AT_LEAST_ONCE;
+    return this;
+  }
+
+  public WriteToBigQuery usingStorageWriteExactlyOnceMethod() {
+    method = Write.Method.STORAGE_WRITE_API;
+    return this;
   }
 
   @Override
@@ -72,7 +82,7 @@ public class BQWrite extends PTransform<PCollection<Row>, PDone> {
             .withSchema(BigQueryUtils.toTableSchema(inputSchema))
             .withWriteDisposition(WriteDisposition.WRITE_APPEND)
             .withCreateDisposition(CreateDisposition.CREATE_IF_NEEDED)
-            .withMethod(Write.Method.STORAGE_API_AT_LEAST_ONCE)
+            .withMethod(method)
         );
     return PDone.in(input.getPipeline());
   }
