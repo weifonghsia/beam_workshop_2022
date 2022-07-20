@@ -54,9 +54,16 @@ def run(input_files, transform_jar, pipeline_args):
         pipeline_args, save_main_session=True)
 
     java_transform = JavaExternalTransform(
-        'beam.workshop.CustomTransform',
-        classpath=[transform_jar]
-    ).create("prefix-")
+        'com.google.beam.workshop.FieldPrefixAdderTransform',
+        # classpath=[transform_jar]
+        expansion_service='localhost:8081'
+    ).create("rate_code", "prefix-")
+
+    write_to_bigquery = JavaExternalTransform(
+        'com.google.beam.workshop.BQWrite',
+        # classpath=[transform_jar]
+        expansion_service='localhost:8081'
+    ).create("event-processing-demo.workshop_demo.bike_stats")
 
     with beam.Pipeline(options=pipeline_options) as pipeline:
         sql_group_by = (
@@ -80,6 +87,7 @@ def run(input_files, transform_jar, pipeline_args):
 
         appended_sql_group_by | "Print Converted" >> beam.Map(lambda row: logging.info("After Java:" + str(row)))
 
+        appended_sql_group_by | "Write to BigQuery" >> write_to_bigquery
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.INFO)
     import argparse

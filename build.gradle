@@ -47,6 +47,10 @@ dependencies {
 
     // Expansion service
     implementation group: 'org.apache.beam', name: 'beam-sdks-java-expansion-service', version: beamVersion
+    implementation(group: 'org.apache.beam', name: 'beam-runners-google-cloud-dataflow-java', version: beamVersion) {
+        exclude group: 'io.confluent', module: 'kafka-schema-registry-client'
+        exclude group: 'io.confluent', module: 'kafka-avro-serializer'
+    }
 
     // Logger implementation for SLF4J.
     implementation group: 'org.slf4j', name: 'slf4j-jdk14', version: '1.7.5'
