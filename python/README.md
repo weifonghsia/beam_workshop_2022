@@ -50,3 +50,10 @@ Once you finish running the pipeline you should exit from the "venv" environment
 ```shell
 deactivate
 ```
+
+## Dataflow Execution
+You'll need to make sure to update the local-host parameters or update for Dataflow execution.
+(See difference between main.py and part3.py)
+
+## Write to BQ 
+This requires you to build an uberjar (fatjar) using the shadow plugin. 
