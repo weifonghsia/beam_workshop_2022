@@ -54,9 +54,9 @@ def run(input_files, transform_jar, pipeline_args):
         pipeline_args, save_main_session=True)
 
     java_transform = JavaExternalTransform(
-        'beam.workshop.CustomTransform',
+        'com.google.beam.workshop.FieldPrefixAdderTransform',
         classpath=[transform_jar]
-    ).create("prefix-")
+    ).create("rate_code", "prefix-")
 
     with beam.Pipeline(options=pipeline_options) as pipeline:
         sql_group_by = (
